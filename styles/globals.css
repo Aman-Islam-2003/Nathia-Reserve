@@ -1,0 +1,421 @@
+@import "tailwindcss";
+
+/*
+ * Explicit class sources. The @tailwindcss/turbopack loader doesn't watch the project root for NEW
+ * files, so classes in files created after the dev CSS was built were silently missing in `next dev`
+ * (production builds were fine). @source dirs are watched, so new files trigger a CSS rebuild.
+ */
+@source "../app";
+@source "../components";
+
+/*
+ * Theme tokens. Values are set as --theme-* CSS variables by <ThemeProvider> (from themes/<name>.ts)
+ * on its wrapper element. `inline` makes each utility reference var(--theme-*) directly, so the
+ * nearest [data-theme] wrapper wins and themes can sit side by side on one page.
+ */
+@theme inline {
+  --color-ink: var(--theme-ink);
+  --color-paper: var(--theme-paper);
+  --color-accent: var(--theme-accent);
+  --color-muted: var(--theme-muted);
+  --color-line: var(--theme-line);
+  --color-accent-soft: var(--theme-accent-soft);
+  --color-accent-on-ink: var(--theme-accent-on-ink);
+  --color-on-ink: var(--theme-on-ink);
+  --color-surface-alt: var(--theme-surface-alt);
+  --color-surface-raised: var(--theme-surface-raised);
+  --color-highlight: var(--theme-highlight);
+  --color-line-on-light: var(--theme-line-on-light);
+
+  --font-display: var(--theme-font-display);
+  --font-body: var(--theme-font-body);
+  --font-mono: var(--theme-font-mono);
+
+  /* Fluid type scale, per theme (themes/<name>.ts typeScale). */
+  --text-xs: var(--theme-text-xs);
+  --text-sm: var(--theme-text-sm);
+  --text-base: var(--theme-text-base);
+  --text-lg: var(--theme-text-lg);
+  --text-xl: var(--theme-text-xl);
+  --text-2xl: var(--theme-text-2xl);
+  --text-3xl: var(--theme-text-3xl);
+  --text-4xl: var(--theme-text-4xl);
+  --text-hero: var(--theme-text-hero);
+
+  --radius-theme: var(--theme-radius);
+  --spacing-section: var(--theme-space-section);
+  --tracking-display: var(--theme-tracking-display);
+  --leading-display: var(--theme-leading-display);
+}
+
+/*
+ * No flash before reveal: one-time reveals ([data-reveal]) start hidden when JS is on
+ * (html.js is set by an inline script in app/layout.tsx) and motion is allowed; GSAP then
+ * reveals them with autoAlpha. [data-revealed] marks one shown without animating because it came
+ * on screen before the motion runtime loaded (revealFallback). Safety net: if GSAP never runs,
+ * they show after 3s. With JS off or reduced motion, nothing is hidden.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  html.js [data-reveal]:not([data-revealed]) {
+    visibility: hidden;
+    animation: reveal-fallback 0s 3s forwards;
+  }
+}
+
+/*
+ * Preloader (components/motion/Preloader.tsx). While <html data-loading> is set the page does not scroll and
+ * chrome marked data-hide-while-loading stays hidden (it fades in as the preloader exits). The overlay never
+ * shows without JS, and if its runtime never runs it removes itself after --preloader-max.
+ */
+html[data-loading] {
+  overflow: hidden;
+}
+html[data-loading] [data-hide-while-loading] {
+  opacity: 0;
+}
+html:not(.js) [data-preloader] {
+  display: none;
+}
+[data-preloader] {
+  animation: preloader-fallback 0s var(--preloader-max, 11s) forwards;
+}
+@keyframes preloader-fallback {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* Nathia Ascent scroll cue: a short line running down its track, again and again [@keyframes cue]. */
+@keyframes nathia-cue {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(220%);
+  }
+}
+
+/* Nathia text selection and keyboard focus, everywhere on its pages [::selection: tan on ink;
+   :focus-visible: 1px tan outline, 4px out]. */
+/* --theme-* directly: @theme inline puts the colours into the utilities and emits no --color-* variables. */
+[data-theme="nathia"] ::selection {
+  background: var(--theme-accent);
+  color: var(--theme-paper);
+}
+[data-theme="nathia"] :focus-visible {
+  outline: 1px solid var(--theme-accent);
+  outline-offset: 4px;
+}
+
+/* Nathia film grain: the noise layer jumps between five offsets [@keyframes grain] (0.9 s, steps(5)). */
+@keyframes nathia-grain {
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  20% {
+    transform: translate(-3%, 2%);
+  }
+  40% {
+    transform: translate(2%, -4%);
+  }
+  60% {
+    transform: translate(-4%, -1%);
+  }
+  80% {
+    transform: translate(3%, 3%);
+  }
+}
+
+/* Nathia sound toggle: each bar rises from 3px to 12px and back while the sound plays [@keyframes bar]. */
+@keyframes nathia-bar {
+  from {
+    height: 3px;
+  }
+  to {
+    height: 12px;
+  }
+}
+
+/* Nathia explorer overlay: the loading logo breathes between 35% and full opacity [@keyframes breathe]. */
+@keyframes nathia-breathe {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes reveal-fallback {
+  to {
+    visibility: visible;
+  }
+}
+
+/*
+ * Fixed site header height. html's scroll-padding-top (below) uses it, so anchors, scrollIntoView
+ * and keyboard focus all stop clear of the header; sections don't add their own scroll-margin. Headers overlay the page,
+ * so heroes stay a full 100svh. "chapter" uses the default; "floating" only has the top status ticker.
+ */
+:root {
+  --header-height: 4rem;
+}
+@media (min-width: 48rem) {
+  :root {
+    --header-height: 5rem;
+  }
+}
+
+[data-header="floating"] {
+  --header-height: 2rem;
+}
+
+/*
+ * Keep focused elements and in-page targets clear of the fixed headers (WCAG 2.4.11): the browser
+ * scrolls focus into the area inside the scroll padding. The floating variant also has the pill at
+ * the bottom.
+ */
+:root {
+  --pill-clearance: 6rem;
+}
+html {
+  scroll-padding-top: var(--header-height);
+  /* Pinned stages are 100vw (PinnedSection), running under a classic scrollbar: clip the sideways overflow.
+     clip, never hidden: hidden makes the element a scroll container, which breaks position: sticky. */
+  overflow-x: clip;
+}
+html:has([data-header="floating"]) {
+  scroll-padding-top: 2rem;
+  scroll-padding-bottom: var(--pill-clearance);
+}
+/*
+ * The one exception to "no scroll-margin on sections": pinned scenes (PinnedSection) are full-screen stages
+ * under the overlaying header, so a jump to one lands at the scene's start (stage at the top), not a header
+ * height into it, where the scene would sit offset until the pin engaged.
+ */
+[data-pin-track] {
+  scroll-margin-top: calc(-1 * var(--header-height));
+}
+
+/* Chapter header scrim: solid behind the bar, fading out over another bar's height below it. */
+@utility h-header-scrim {
+  height: calc(var(--header-height) * 2);
+}
+
+/* Print palette: brand-neutral black on white, used by the print block below. */
+:root {
+  --print-paper: #fff;
+  --print-ink: #000;
+  --print-muted: #333;
+  --print-line: #bbb;
+}
+/* Room for the floating bottom pill below the footer's last line. */
+[data-header="floating"] footer {
+  padding-bottom: calc(var(--pill-clearance) + 1rem);
+}
+
+/*
+ * Below-the-fold sections skip layout and paint until they're near the viewport. The browser's first
+ * full-page layout was the biggest main-thread task on mobile (~0.5 s at 4x CPU on the luxury demo).
+ * Safeguards: SmoothScroll refreshes ScrollTrigger when <main>'s height changes (skipped sections use
+ * the intrinsic-size estimate until rendered), anchor scrolling re-checks its landing spot, and print
+ * renders everything.
+ * Pages with pinned scenes opt out (<main data-full-layout>): an estimate above a pin moves every scroll
+ * position below it once the real height renders, so scene starts and anchors would shift for visitors.
+ */
+main:not([data-full-layout]) > section + section,
+main:not([data-full-layout]) + footer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
+/*
+ * Those pages still skip rendering for sections whose height is fixed in CSS (pinned tracks, fixed-height
+ * scenes): a skipped element keeps its own height, so nothing below moves. Rendering the whole /nathia page
+ * up front measured ~0.9 s more style/layout in the first frame at 4x CPU.
+ */
+main[data-full-layout] > :is([data-pin-track], [data-fixed-height]):not(:first-child) {
+  content-visibility: auto;
+}
+/*
+ * Tracks that size to their content there (no pin: reduced motion, or mobile="stack" below 900px) can't be
+ * skipped: a skipped one has no height, so everything below moves when it renders. (The selectors repeat an
+ * attribute to outrank the rule above.)
+ */
+@media (prefers-reduced-motion: reduce) {
+  main[data-full-layout] > [data-pin-track][data-pin-track]:not(:first-child) {
+    content-visibility: visible;
+  }
+}
+@media (max-width: 899px) {
+  main[data-full-layout] > [data-pin-track][data-pin-stack]:not(:first-child) {
+    content-visibility: visible;
+  }
+}
+
+@utility min-h-hero {
+  min-height: 100svh;
+}
+
+/*
+ * Print: every piece of content visible and static, black on white, no motion-only duplicates.
+ * !important is needed to beat the inline styles GSAP leaves on elements and the theme
+ * variables ThemeProvider sets inline.
+ */
+@media print {
+  [data-theme] {
+    --theme-paper: var(--print-paper) !important;
+    --theme-ink: var(--print-ink) !important;
+    --theme-muted: var(--print-muted) !important;
+    --theme-accent: var(--print-ink) !important;
+    --theme-line: var(--print-line) !important;
+  }
+  html.js [data-reveal],
+  [data-reveal] {
+    visibility: visible !important;
+    opacity: 1 !important;
+    clip-path: none !important;
+    animation: none !important;
+  }
+  [data-reveal] *,
+  [data-parallax],
+  [data-magnetic],
+  [data-marquee-track] {
+    transform: none !important;
+    translate: none !important;
+  }
+  [data-marquee-track] {
+    flex-wrap: wrap;
+    width: auto;
+  }
+  /* HorizontalScroll: panels stacked, at rest, every effect undone; the counter strip at its start. */
+  [data-hs-track] {
+    transform: none !important;
+    flex-direction: column;
+    width: auto !important;
+  }
+  [data-hs-track] [data-hs-panel],
+  [data-hs-track] [data-hs-panel] * {
+    opacity: 1 !important;
+    visibility: visible !important;
+    clip-path: none !important;
+  }
+  [data-hs-counter] {
+    transform: none !important;
+  }
+  /* Nathia Estate film: the first photo, then every chapter card in order, static. */
+  [data-es-shots] {
+    position: relative !important;
+    height: 60vh !important;
+  }
+  [data-es-cards] {
+    position: static !important;
+    display: block !important;
+    width: auto !important;
+  }
+  [data-es-card],
+  [data-es-card] * {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+  }
+  [data-es-card] {
+    margin-top: 2rem;
+  }
+  /* Nathia Snow: heading, body and count shown, at rest. */
+  [data-sn-line],
+  [data-sn-media] {
+    transform: none !important;
+  }
+  [data-sn-body],
+  [data-sn-count] {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+  }
+  [inert],
+  [data-print="hide"] {
+    display: none !important;
+  }
+  [data-site-header] {
+    position: static !important;
+  }
+  main > section,
+  footer {
+    content-visibility: visible !important;
+  }
+  [data-header="floating"] footer {
+    padding-bottom: 4rem;
+  }
+  /* Counters not yet scrolled to show their start value; print the final one instead. */
+  [data-counter-live] {
+    visibility: hidden !important;
+  }
+  [data-counter-final] {
+    visibility: visible !important;
+  }
+  section {
+    min-height: 0 !important;
+    break-inside: avoid-page;
+  }
+  /* Pinned sections (PinnedSection): no reserved scroll track or sticky stage on paper. */
+  [data-pin-track] {
+    height: auto !important;
+  }
+  [data-pinned] {
+    position: relative !important;
+    height: auto !important;
+    min-height: 100vh;
+  }
+  /* Nathia Address: intro, elevation, distances (every row) and closing heading in turn, static. */
+  :is([data-ad-intro], [data-ad-elev], [data-ad-panel], [data-ad-end]) {
+    position: static !important;
+    translate: none !important;
+  }
+  :is([data-ad-intro], [data-ad-elev], [data-ad-panel], [data-ad-note], [data-ad-row], [data-ad-head], [data-ad-closing], [data-ad-body]) {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+  }
+  [data-ad-row] {
+    display: grid !important;
+  }
+  /* Nathia Day: every moment's line, one under the other. */
+  [data-dy-text] {
+    grid-area: auto !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+  [data-dy-line] {
+    transform: none !important;
+  }
+  /* Nathia Measure: the four numbers play one at a time in one place; print them all, stacked. */
+  [data-mz-num] {
+    position: static !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    filter: none !important;
+    transform: none !important;
+  }
+}
+
+/*
+ * Fit-to-width display type (Hero "fullbleed-text"). CSS only, no JS, no layout shift:
+ * the server sets --fit-units (weighted width of the longest word, lib/fit-text.ts) on an
+ * @container wrapper; the theme sets --theme-display-advance (font width per unit, measured
+ * as the widest sample word). The longest word targets 90% of the container, so estimate error
+ * underfills rather than overflows. break-words is the last resort below the min size.
+ */
+:root {
+  --text-fit-min: 2.25rem;
+  --text-fit-max: 18rem;
+}
+
+@utility text-fit {
+  font-size: clamp(
+    var(--text-fit-min),
+    calc(90cqi / (var(--fit-units) * var(--theme-display-advance))),
+    var(--text-fit-max)
+  );
+  overflow-wrap: break-word;
+}

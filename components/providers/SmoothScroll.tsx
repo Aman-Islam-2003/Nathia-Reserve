@@ -1,43 +1,20 @@
 "use client";
 
-import Lenis from "lenis";
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { gsap, ScrollTrigger } from "@/lib/gsap";
-import { prefersReducedMotion } from "@/lib/motion";
+import type { ReactNode } from "react";
+import { lazyMotion } from "@/components/motion/lazy";
 
-const LenisContext = createContext<Lenis | null>(null);
-export const useLenis = () => useContext(LenisContext);
+export { useLenis } from "./lenis-store";
 
-/** Lenis smooth scroll, driven by GSAP's ticker so ScrollTrigger stays in sync. */
+// Lenis, GSAP's ticker hookup and ScrollTrigger refreshes load after first paint (runtime/SmoothScroll):
+// native scrolling works until then, and the page's first render doesn't wait for them.
+const SmoothScrollRuntime = lazyMotion(() => import("./runtime/SmoothScroll"));
+
+/** Renders the page and, once loaded, the app's single Lenis instance. */
 export function SmoothScroll({ children }: { children: ReactNode }) {
-  const [lenis, setLenis] = useState<Lenis | null>(null);
-  const rafRef = useRef<((t: number) => void) | null>(null);
-
-  useEffect(() => {
-    if (prefersReducedMotion()) return;
-    const instance = new Lenis({ duration: 1.15, smoothWheel: true, wheelMultiplier: 0.9 });
-    instance.on("scroll", ScrollTrigger.update);
-    const raf = (time: number) => instance.raf(time * 1000);
-    rafRef.current = raf;
-    gsap.ticker.add(raf);
-    gsap.ticker.lagSmoothing(0);
-    setLenis(instance);
-    return () => {
-      if (rafRef.current) gsap.ticker.remove(rafRef.current);
-      instance.destroy();
-    };
-  }, []);
-
-  return <LenisContext.Provider value={lenis}>{children}</LenisContext.Provider>;
-}
-
-/** Scroll to an anchor with Lenis when available, native otherwise. */
-export function useScrollTo() {
-  const lenis = useLenis();
-  return (target: string) => {
-    const el = document.querySelector(target) as HTMLElement | null;
-    if (!el) return;
-    if (lenis) lenis.scrollTo(el, { duration: 1.6 });
-    else el.scrollIntoView({ behavior: prefersReducedMotion() ? "auto" : "smooth" });
-  };
+  return (
+    <>
+      {children}
+      <SmoothScrollRuntime />
+    </>
+  );
 }

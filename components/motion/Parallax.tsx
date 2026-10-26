@@ -1,23 +1,44 @@
 "use client";
 
-import Image from "next/image";
-import { useRef } from "react";
-import { gsap, useGSAP } from "@/lib/gsap";
-import { prefersReducedMotion } from "@/lib/motion";
+import { useRef, type ReactNode } from "react";
+import { lazyMotion } from "./lazy";
 
-/** Oversized image drifts slower than the page inside a clipped frame. */
-export function Parallax({ src, alt, className, amount = 12, sizes = "100vw" }: { src: string; alt: string; className?: string; amount?: number; sizes?: string }) {
+// The scroll link (GSAP) loads after first paint; until then the element sits where layout puts it.
+const ParallaxMotion = lazyMotion(() => import("./runtime/Parallax"), { near: true });
+
+/**
+ * Vertical parallax while the element crosses the viewport. `speed` is the fraction of half
+ * the viewport height it drifts each way: positive moves up as you scroll, negative moves down.
+ * Wrap in an overflow-hidden frame if the edges must stay covered. `drift` instead moves it by a share of
+ * its own height (yPercent from → to), optionally scaling as it goes (an image settling in its frame).
+ */
+export function Parallax({
+  speed = 0.2,
+  drift,
+  range,
+  media,
+  className,
+  children,
+}: {
+  speed?: number;
+  /** Percent of its own height, from → to, while it crosses the viewport; `scale` from → to alongside. */
+  drift?: { yPercent: [number, number]; scale?: [number, number] };
+  /**
+   * The scroll range of a drift (ScrollTrigger start/end of its trigger; default "top bottom" → "bottom top",
+   * the whole crossing) and the trigger: `closest` names an ancestor (e.g. "footer"), else the parent frame.
+   */
+  range?: { start: string; end: string; closest?: string };
+  /** Only moves while this media query matches (e.g. "(min-width: 900px)" for desktop only). */
+  media?: string;
+  className?: string;
+  children: ReactNode;
+}) {
   const ref = useRef<HTMLDivElement>(null);
-  useGSAP(() => {
-    if (!ref.current || prefersReducedMotion()) return;
-    gsap.fromTo(ref.current.querySelector(".parallax__inner"), { yPercent: -amount }, {
-      yPercent: amount, ease: "none",
-      scrollTrigger: { trigger: ref.current, start: "top bottom", end: "bottom top", scrub: true },
-    });
-  }, { scope: ref });
+
   return (
-    <div ref={ref} className={`parallax ${className ?? ""}`}>
-      <div className="parallax__inner"><Image src={src} alt={alt} fill sizes={sizes} /></div>
+    <div ref={ref} data-parallax className={className}>
+      {children}
+      <ParallaxMotion target={ref} speed={speed} drift={drift} range={range} media={media} />
     </div>
   );
 }

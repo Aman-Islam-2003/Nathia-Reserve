@@ -1,23 +1,6 @@
-import { Header } from "@/components/Header";
-import { Hero } from "@/components/Hero";
-import { About } from "@/components/About";
-import { Numbers } from "@/components/Numbers";
-import { Residences } from "@/components/Residences";
-import { Register } from "@/components/Register";
-import { Footer } from "@/components/Footer";
+import { redirect } from "next/navigation";
 
+// The site lives at /nathia (noindexed there); the root just forwards to it.
 export default function Home() {
-  return (
-    <>
-      <Header />
-      <main>
-        <Hero />
-        <About />
-        <Numbers />
-        <Residences />
-        <Register />
-      </main>
-      <Footer />
-    </>
-  );
+  redirect("/nathia");
 }
